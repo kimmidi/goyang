@@ -93,7 +93,9 @@ type Entry struct {
 	// is a module only.
 	Identities []*Identity `json:",omitempty"`
 
-	Augments []*Entry `json:"-"` // Augments associated with this entry
+	Augments  []*Entry         `json:"-"` // Augments defined in this entry.
+	Augmented []*Entry         `json:"-"` // Augments merged into this entry.
+	Uses      map[*Uses]*Entry `json:"-"` // Uses merged into this entry.
 
 	// Extra maps all the unsupported fields to their values
 	Extra map[string][]interface{} `json:"-"`
@@ -353,6 +355,49 @@ func (e *Entry) add(key string, value *Entry) *Entry {
 	}
 	e.Dir[key] = value
 	return e
+}
+
+// GetWhenXPath returns the when XPath statement of e if able.
+func (e *Entry) GetWhenXPath() (string, bool) {
+	switch n := e.Node.(type) {
+	case *Container:
+		if n.When != nil && n.When.Statement() != nil {
+			return n.When.Statement().Arg()
+		}
+	case *Leaf:
+		if n.When != nil && n.When.Statement() != nil {
+			return n.When.Statement().Arg()
+		}
+	case *LeafList:
+		if n.When != nil && n.When.Statement() != nil {
+			return n.When.Statement().Arg()
+		}
+	case *List:
+		if n.When != nil && n.When.Statement() != nil {
+			return n.When.Statement().Arg()
+		}
+	case *Choice:
+		if n.When != nil && n.When.Statement() != nil {
+			return n.When.Statement().Arg()
+		}
+	case *Case:
+		if n.When != nil && n.When.Statement() != nil {
+			return n.When.Statement().Arg()
+		}
+	case *AnyXML:
+		if n.When != nil && n.When.Statement() != nil {
+			return n.When.Statement().Arg()
+		}
+	case *AnyData:
+		if n.When != nil && n.When.Statement() != nil {
+			return n.When.Statement().Arg()
+		}
+	case *Augment:
+		if n.When != nil && n.When.Statement() != nil {
+			return n.When.Statement().Arg()
+		}
+	}
+	return "", false
 }
 
 // entryCache is used to prevent unnecessary recursion into previously
@@ -671,8 +716,13 @@ func ToEntry(n Node) (e *Entry) {
 				e.Identities = i
 			}
 		case "uses":
+			if e.Uses == nil {
+				e.Uses = map[*Uses]*Entry{}
+			}
 			for _, a := range fv.Interface().([]*Uses) {
-				e.merge(nil, nil, ToEntry(a))
+				grouping := ToEntry(a)
+				e.merge(nil, nil, grouping)
+				e.Uses[a] = grouping.shallowDup()
 			}
 		case "type":
 			// We don't expect this to happen, so throw an error.
@@ -776,6 +826,7 @@ func (e *Entry) Augment(addErrors bool) (processed, skipped int) {
 		// are merged into another entry.
 		processed++
 		ae.merge(nil, a.Namespace(), a)
+		ae.Augmented = append(ae.Augmented, a.shallowDup())
 	}
 	e.Augments = sa
 	return processed, skipped
@@ -959,6 +1010,27 @@ func (e *Entry) InstantiatingModule() (string, error) {
 		return "", fmt.Errorf("could not find module %s when retrieving namespace for %s", n.Name, e.Name)
 	}
 	return ns.Name, nil
+}
+
+// shallowDup makes a shallow duplicate of e (only direct children are
+// duplicated; grandchildren and deeper descedents are deleted).
+func (e *Entry) shallowDup() *Entry {
+	// Warning: if we add any elements to Entry that should not be
+	// copied we will have to explicitly uncopy them.
+	ne := *e
+
+	// Now only copy direct children, clear their Dir, and fix up
+	// Parent pointers.
+	if e.Dir != nil {
+		ne.Dir = make(map[string]*Entry, len(e.Dir))
+		for k, v := range e.Dir {
+			de := *v
+			de.Dir = nil
+			de.Parent = &ne
+			ne.Dir[k] = &de
+		}
+	}
+	return &ne
 }
 
 // dup makes a deep duplicate of e.
