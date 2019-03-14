@@ -93,9 +93,9 @@ type Entry struct {
 	// is a module only.
 	Identities []*Identity `json:",omitempty"`
 
-	Augments  []*Entry         `json:"-"` // Augments defined in this entry.
-	Augmented []*Entry         `json:"-"` // Augments merged into this entry.
-	Uses      map[*Uses]*Entry `json:"-"` // Uses merged into this entry.
+	Augments  []*Entry    `json:"-"`          // Augments defined in this entry.
+	Augmented []*Entry    `json:"-"`          // Augments merged into this entry.
+	Uses      []*UsesStmt `json:",omitempty"` // Uses merged into this entry.
 
 	// Extra maps all the unsupported fields to their values
 	Extra map[string][]interface{} `json:"-"`
@@ -124,6 +124,12 @@ type ListAttr struct {
 	MinElements *Value // leaf-list or list MUST have at least min-elements
 	MaxElements *Value // leaf-list or list has at most max-elements
 	OrderedBy   *Value // order of entries determined by "system" or "user"
+}
+
+// A UsesStmt associates a *Uses with its referenced grouping *Entry
+type UsesStmt struct {
+	Uses     *Uses
+	Grouping *Entry
 }
 
 // Modules returns the Modules structure that e is part of.  This is needed
@@ -716,13 +722,10 @@ func ToEntry(n Node) (e *Entry) {
 				e.Identities = i
 			}
 		case "uses":
-			if e.Uses == nil {
-				e.Uses = map[*Uses]*Entry{}
-			}
 			for _, a := range fv.Interface().([]*Uses) {
 				grouping := ToEntry(a)
 				e.merge(nil, nil, grouping)
-				e.Uses[a] = grouping.shallowDup()
+				e.Uses = append(e.Uses, &UsesStmt{a, grouping.shallowDup()})
 			}
 		case "type":
 			// We don't expect this to happen, so throw an error.
