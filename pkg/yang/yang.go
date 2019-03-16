@@ -626,13 +626,13 @@ type Uses struct {
 	Parent     Node         `yang:"Parent,nomerge"`
 	Extensions []*Statement `yang:"Ext"`
 
-	Augment     *Augment  `yang:"augment"`
-	Description *Value    `yang:"description"`
-	IfFeature   []*Value  `yang:"if-feature"`
-	Refine      []*Refine `yang:"refine"`
-	Reference   *Value    `yang:"reference"`
-	Status      *Value    `yang:"status"`
-	When        *Value    `yang:"when"`
+	Augment     []*Augment `yang:"augment"`
+	Description *Value     `yang:"description"`
+	IfFeature   []*Value   `yang:"if-feature"`
+	Refine      []*Refine  `yang:"refine"`
+	Reference   *Value     `yang:"reference"`
+	Status      *Value     `yang:"status"`
+	When        *Value     `yang:"when"`
 }
 
 func (Uses) Kind() string             { return "uses" }
