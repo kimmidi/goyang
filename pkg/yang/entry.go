@@ -989,6 +989,12 @@ func (e *Entry) Namespace() *Value {
 	// Return the namespace of a valid root parent entry
 	if e != nil && e.Node != nil {
 		if root := RootNode(e.Node); root != nil {
+			if root.Kind() == "submodule" {
+				root = root.modules.Modules[root.BelongsTo.Name]
+				if root == nil {
+					return new(Value)
+				}
+			}
 			return root.Namespace
 		}
 	}
@@ -1010,7 +1016,7 @@ func (e *Entry) InstantiatingModule() (string, error) {
 
 	ns, err := e.Modules().FindModuleByNamespace(n.Name)
 	if err != nil {
-		return "", fmt.Errorf("could not find module %s when retrieving namespace for %s", n.Name, e.Name)
+		return "", fmt.Errorf("could not find module %q when retrieving namespace for %s", n.Name, e.Name)
 	}
 	return ns.Name, nil
 }
