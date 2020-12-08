@@ -47,7 +47,7 @@ func (v *Value) asRangeInt(min, max int64) (int64, error) {
 	if v == nil {
 		return 0, fmt.Errorf("value is required in the range of [%d..%d]", min, max)
 	}
-	n, err := ParseNumber(v.Name)
+	n, err := ParseInt(v.Name)
 	if err != nil {
 		return 0, err
 	}
